@@ -1,4 +1,4 @@
-CREATE OR REPLACE TABLE `nbcu-ds-sandbox-a-001.Shunchao_Sandbox.Ad_Creative_Part_One`
+CREATE OR REPLACE TABLE `nbcu-ds-sandbox-a-001.Shunchao_Sandbox.Ad_Creative_Part_One_V2`
 AS
 WITH fwlogs_r AS (
   SELECT REGEXP_EXTRACT(AllRequestKV, '[?&]am_crmid=([^&]+)') AS fw_Id, 
@@ -26,7 +26,9 @@ WITH fwlogs_r AS (
 ),
 
 fwlogs_i AS ( --FW impression logs of ad initiation 
-    SELECT UniqueIdentifier AS fw_UniqueIdentifier, 
+    SELECT 
+    PlacementId,
+    UniqueIdentifier AS fw_UniqueIdentifier, 
         TransactionId AS fw_TransactionId,
         AdUnitId AS fw_AdUnitId,
         CreativeId AS fw_CreativeId
@@ -42,20 +44,29 @@ FROM `nbcu-sdp-prod-003.sdp_persistent_views.FreewheelCreativeLookupView`
 group by 1,2
 ), --- Creative_Name_Match
 
+advertiser as (select placementIdMrm,advertiserId,advertiserName
+ from `nbcu-sdp-prod-003.sdp_persistent_views.FreewheelCampaignAuditLookupView`
+group by 1,2,3), -- Advertiser_Name_Match
+
+
 fwlogs_i_w_name AS (
 select *
 from fwlogs_i a
 left join creative_name b on b.creativeID = a.fw_CreativeId
+left join advertiser c on cast(c.placementIdMrm as string) = cast(a.PlacementId as string)
 ),
+
+
 
 fwlogs_joined AS ( --join FW request with impression on UniqueIdentifier and TransactionId
     SELECT a.*, 
     b.fw_AdUnitId,
-    b.creativeName
+    b.creativeName,
+    b.advertiserName
     FROM fwlogs_r a
     INNER JOIN fwlogs_i_w_name b ON a.fw_UniqueIdentifier = b.fw_UniqueIdentifier
         AND a.fw_TransactionId = b.fw_TransactionId
-    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
+    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9,10
 ),
 fw_profile_mapping AS ( --FW, mapping table
     SELECT ProfileId AS fw_ProfileId,
@@ -78,7 +89,6 @@ fwm_joined as ( --join FWID with ExternalProfilerID from mapping table
 ),
 silver AS (
     SELECT adobe_tracking_id AS silver_Id,
-
         persona_id AS silver_PersonaId,
         adobe_timestamp AS silver_Date,
         video_id AS silver_VideoId, --post_evar122
@@ -136,10 +146,11 @@ silverm_joined AS ( --join Adobe_ID with ExternalProfilerID FROM mapping table
     INNER JOIN silver_persona_mapping c ON a.silver_PersonaId = c.madobe_ObfuscatedId
 )
 
-SELECT DISTINCT a.fw_Date,
+SELECT DISTINCT 
     b.silver_Id,
     b.silver_Date, 
-    a.creativeName
+    a.creativeName,
+    a.advertiserName
 FROM fwm_joined a
 INNER JOIN silverm_joined b ON a.fw_ProfileId = b.adobe_ProfileId
     AND a.fw_DocumentKey = b.adobe_DocumentKey
