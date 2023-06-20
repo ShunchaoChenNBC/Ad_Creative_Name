@@ -141,7 +141,7 @@ silver AS (
         asset_length AS silver_VideoLength, --post_evar124 -- diff from adobe
         consumption_type AS silver_ConsumptionType
     FROM `nbcu-ds-prod-001.PeacockDataMartSilver.SILVER_VIDEO`
-    WHERE adobe_date BETWEEN '2023-03-20' AND '2023-04-20'
+    WHERE adobe_date BETWEEN '2023-06-01' AND '2023-06-10'
         --AND LOWER(stream_type) = 'live'
         AND adobe_tracking_id IS NOT NULL
         AND persona_id IS NOT NULL
