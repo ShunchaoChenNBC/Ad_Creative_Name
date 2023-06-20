@@ -1,4 +1,3 @@
-
 CREATE OR REPLACE TABLE `nbcu-ds-sandbox-a-001.Shunchao_Sandbox.Ad_Creative_Part_One`
 AS
 WITH fwlogs_r AS (
@@ -18,56 +17,23 @@ WITH fwlogs_r AS (
         --REGEXP_EXTRACT(AllRequestKV, '[?&]am_abtestid=([^&]+)') AS fw_Test,
         DATE(SDPBusinessDate) AS fw_Date
     FROM `nbcu-sdp-prod-003.sdp_persistent_views.FreewheelV4LogsView` 
-    WHERE EventType = 'R'
+    WHERE 1=1
         AND AllRequestKV IS NOT NULL
         AND UniqueIdentifier IS NOT NULL
         AND CustomVisitorId IS NOT NULL
         AND DATE(SDPBusinessDate) BETWEEN '2023-06-01' AND '2023-06-10'
-        AND REGEXP_EXTRACT(AllRequestKV, '[?&]am_abvrtd=([^&]+)') IN ('plmcl', 'plmv1', 'pgocl', 'pgov1')
-        AND REGEXP_EXTRACT(AllRequestKV, '[?&]am_extmp=([^&]+)') IN ('plmcl', 'plmv1', 'pgocl', 'pgov1')
-        AND REGEXP_EXTRACT(AllRequestKV, '[?&]am_abtestid=([^&]+)') IN ('LiveSLE_LM', 'LiveSLE_Go')
     GROUP BY 1, 2, 3, 4, 5, 6, 7
 ),
---fwlogs_r2 AS (
---    SELECT * EXCEPT (fw_is_lat, fw_atts, fw_uoo),
---        CASE WHEN fw_uoo = "1" THEN "1"
---            WHEN fw_is_lat = "1" THEN "1"
---            WHEN fw_atts IN ("0", "1", "2") THEN "1"
---            WHEN fw_Coppa = "1" THEN "1" ELSE "0" END AS Do_Not_Track,
---    FROM fwlogs_r
---    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
---    HAVING Do_Not_Track = "0"
---),
+
 fwlogs_i AS ( --FW impression logs of ad initiation 
     SELECT UniqueIdentifier AS fw_UniqueIdentifier, 
         TransactionId AS fw_TransactionId,
-        --EventName AS fw_EventName,
-        --EventType AS fw_EventType,
-        --SDPBusinessDate AS fw_SDPBusinessDate,
-        --TimePositionClass AS fw_TimePositionClass,
-        --AdDuration AS fw_AdDuration,
-        --AdsSelected AS fw_AdsSelected,
         AdUnitId AS fw_AdUnitId,
-        CreativeId AS fw_CreativeId,
-        --CreativeRenditionId AS fw_CreativeRenditionId,
-        --CreativeDuration AS fw_CreativeDuration,
-        --PlacementId AS fw_PlacementId,
-        --PositionInSlot AS fw_PositionInSlot,
-        --VideoAssetId AS fw_VideoAssetId
-
-    /*
-    defaultImpression - 0%
-    firstQuartile - 25%
-    _q_midPoint - 50%
-    thirdQuartile - 75%
-    _q_complete - 100% ad completion
-    */
+        CreativeId AS fw_CreativeId
     FROM `nbcu-sdp-prod-003.sdp_persistent_views.FreewheelV4LogsView` 
     WHERE EventType = 'I'
         AND DATE(SDPBusinessDate) BETWEEN '2023-06-01' AND '2023-06-10'
         AND AdUnitId IS NOT NULL
-        AND EventName = 'defaultImpression' --ad initiated
-        --ORDER BY SDPBusinessDate
 ),
 
 creative_name as (
